@@ -73,7 +73,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     // database gets upgraded properly. At a minimum, please confirm that 'upgradeVersion'
     // is properly propagated through your change.  Not doing so will result in a loss of user
     // settings.
-    private static final int DATABASE_VERSION = 118;
+    private static final int DATABASE_VERSION = 119;
 
     private Context mContext;
     private int mUserHandle;
@@ -1885,7 +1885,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             upgradeVersion = 118;
         }
 
-<<<<<<< HEAD
         if (upgradeVersion < 119) {
             String[] settingsToMove = new String[] {
                     Settings.Secure.QS_SHOW_BRIGHTNESS_SLIDER,
@@ -1897,8 +1896,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
 
 
-=======
->>>>>>> Migrate QS_TILES to Settings.Secure
         // *** Remember to update DATABASE_VERSION above!
 
         if (upgradeVersion != currentVersion) {
