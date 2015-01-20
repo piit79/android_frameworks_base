@@ -207,20 +207,6 @@ public class KeyguardStatusView extends GridLayout {
         return false;
     }
 
-    @Override
-    public void onWeatherChanged(WeatherController.WeatherInfo info) {
-        if (info.temp == null || info.condition == null) {
-            mTemperatureText.setText(null);
-            mTemperatureText.setText(0);
-            mWeatherCity.setText("--");
-            mWeatherIcon.setImageDrawable(null);
-        } else {
-            mTemperatureText.setText(info.temp);
-            mWeatherCity.setText(info.city);
-            mWeatherIcon.setImageDrawable(info.conditionDrawable);
-        }
-    }
-
     // DateFormat.getBestDateTimePattern is extremely expensive, and refresh is called often.
     // This is an optimization to ensure we only recompute the patterns when the inputs change.
     private static final class Patterns {
