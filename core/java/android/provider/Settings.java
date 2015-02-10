@@ -3348,12 +3348,6 @@ public final class Settings {
          */
         public static final String STATUS_BAR_CLOCK = "status_bar_clock";
 
-         /**
-         * Recents Show/Hide Search Bar
-         * @hide
-         */
-        public static final String RECENTS_SHOW_HIDE_SEARCH_BAR = "recents_show_hide_search_bar";
-
         /**
          * Display style of AM/PM next to clock in status bar
          * 0: Normal display (Eclair stock)
