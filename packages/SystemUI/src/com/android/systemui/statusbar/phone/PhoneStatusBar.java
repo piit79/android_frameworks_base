@@ -221,6 +221,7 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
     private static final int MSG_OPEN_NOTIFICATION_PANEL = 1000;
     private static final int MSG_CLOSE_PANELS = 1001;
     private static final int MSG_OPEN_SETTINGS_PANEL = 1002;
+    private static final int MSG_UPDATE_NOTIFICATIONS = 1003;
     // 1020-1040 reserved for BaseStatusBar
 
     private static final boolean CLOSE_PANEL_WHEN_EMPTIED = true;
@@ -617,7 +618,7 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
         mNavigationBarView.setDisabledFlags(mDisabled);
         mNavigationBarView.setBar(this);
         mNavigationBarView.updateResources(getNavbarThemedResources());
-        addNavigationBar();
+        addNavigationBar(true); // dynamically adding nav bar, reset System UI visibility!
     }
 
     // ensure quick settings is disabled until the current user makes it through the setup wizard
@@ -829,7 +830,7 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
         // TODO: use MediaSessionManager.SessionListener to hook us up to future updates
         // in session state
 
-        addNavigationBar();
+        addNavigationBar(false);
 
         SettingsObserver observer = new SettingsObserver(mHandler);
         observer.observe();
@@ -1531,16 +1532,24 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
         }
     }
 
-    private void prepareNavigationBarView() {
+    private void prepareNavigationBarView(boolean forceReset) {
         mNavigationBarView.reorient();
         mNavigationBarView.setListeners(mRecentsClickListener, mRecentsPreloadOnTouchListener,
                 mLongPressBackRecentsListener, mHomeActionListener);
+
+        if (forceReset) {
+            // Nav Bar was added dynamically - we need to reset the mSystemUiVisibility and call
+            // setSystemUiVisibility so that mNavigationBarMode is set to the correct value
+            int newVal = mSystemUiVisibility;
+            mSystemUiVisibility = 0;
+            setSystemUiVisibility(newVal, SYSTEM_UI_VISIBILITY_MASK);
+        }
 
         updateSearchPanel();
     }
 
     // For small-screen devices (read: phones) that lack hardware navigation buttons
-    private void addNavigationBar() {
+    private void addNavigationBar(boolean forceReset) {
         if (DEBUG) Log.v(TAG, "addNavigationBar: about to add " + mNavigationBarView);
         if (mNavigationBarView == null) return;
 
@@ -1551,7 +1560,7 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
             return;
         }
 
-        prepareNavigationBarView();
+        prepareNavigationBarView(forceReset);
 
         mWindowManager.addView(mNavigationBarView, getNavigationBarLayoutParams());
     }
@@ -1567,7 +1576,7 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
     private void repositionNavigationBar() {
         if (mNavigationBarView == null || !mNavigationBarView.isAttachedToWindow()) return;
 
-        prepareNavigationBarView();
+        prepareNavigationBarView(false);
 
         mWindowManager.updateViewLayout(mNavigationBarView, getNavigationBarLayoutParams());
     }
@@ -1951,8 +1960,7 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
         mStackScroller.updateSpeedBumpIndex(speedbumpIndex);
     }
 
-    @Override
-    protected void updateNotifications() {
+    private void handleUpdateNotifications() {
         // TODO: Move this into updateNotificationIcons()?
         if (mNotificationIcons == null) return;
 
@@ -1960,6 +1968,13 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
 
         updateNotificationShade();
         updateNotificationIcons();
+    }
+
+    @Override
+    protected void updateNotifications() {
+        if (!mHandler.hasMessages(MSG_UPDATE_NOTIFICATIONS)) {
+            mHandler.sendEmptyMessage(MSG_UPDATE_NOTIFICATIONS);
+        }
     }
 
     private void updateNotificationIcons() {
@@ -2275,7 +2290,7 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
         }
 
         // apply user lockscreen image
-        if (backdropBitmap == null) {
+        if (mMediaMetadata == null && backdropBitmap == null) {
             WallpaperManager wm = (WallpaperManager)
                     mContext.getSystemService(Context.WALLPAPER_SERVICE);
             if (wm != null) {
@@ -2626,6 +2641,9 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
                 case MSG_ESCALATE_HEADS_UP:
                     escalateHeadsUp();
                     setHeadsUpVisibility(false);
+                    break;
+                case MSG_UPDATE_NOTIFICATIONS:
+                    handleUpdateNotifications();
                     break;
             }
         }
@@ -3755,6 +3773,12 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
         updateNotifications();
         resetUserSetupObserver();
         setControllerUsers();
+
+        WallpaperManager wm = (WallpaperManager)
+                mContext.getSystemService(Context.WALLPAPER_SERVICE);
+        wm.forgetLoadedKeyguardWallpaper();
+        updateMediaMetaData(true);
+
         if (mNavigationBarView != null) {
             mNavigationBarView.updateSettings();
         }
@@ -3930,12 +3954,12 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
      * meantime, just update the things that we know change.
      */
     void updateResources(Configuration newConfig) {
-        final Context context = mContext;
-
         // detect theme change.
         ThemeConfig newTheme = newConfig != null ? newConfig.themeConfig : null;
-        if (shouldUpdateStatusbar(mCurrentTheme, newTheme)) {
-            mCurrentTheme = (ThemeConfig) newTheme.clone();
+        final boolean updateStatusBar = shouldUpdateStatusbar(mCurrentTheme, newTheme);
+        if (newTheme != null) mCurrentTheme = (ThemeConfig) newTheme.clone();
+        if (updateStatusBar) {
+            mContext.recreateTheme();
             recreateStatusBar();
         } else {
             loadDimens();
