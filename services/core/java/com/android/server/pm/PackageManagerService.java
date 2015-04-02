@@ -3508,7 +3508,7 @@ public class PackageManagerService extends IPackageManager.Stub {
                             // If the result set is different from when this
                             // was created, we need to clear it and re-ask the
                             // user their preference, if we're looking for an "always" type entry.
-                            if (always && !pa.mPref.sameSet(query, priority)) {
+                            if (always && !pa.mPref.sameSet(query)) {
                                 Slog.i(TAG, "Result set changed, dropping preferred activity for "
                                         + intent + " type " + resolvedType);
                                 if (DEBUG_PREFERRED) {
@@ -7922,6 +7922,9 @@ public class PackageManagerService extends IPackageManager.Stub {
                 if (isUpdatedSystemApp(pkg)) {
                     final PackageSetting sysPs = mSettings
                             .getDisabledSystemPkgLPr(pkg.packageName);
+                    if (sysPs == null) {
+                        return false;
+                    }
                     final GrantedPermissions origGp = sysPs.sharedUser != null
                             ? sysPs.sharedUser : sysPs;
 
